@@ -6,7 +6,7 @@
       "framework": "vite"
     },
     "backend": {
-      "root": "backend",
+      "entrypoint": "backend/main.py",
       "routePrefix": "/_backend"
     }
   }
