@@ -456,3 +456,44 @@ input[type='range']::-moz-range-thumb {
 .selection-active {
   animation: selectionPulse 2s ease-in-out infinite;
 }
+
+/* ===== Responsive Mobile Drawer ===== */
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.drawer-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .mobile-drawer {
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    height: 100% !important;
+    z-index: 90 !important;
+    transform: translateX(100%);
+    transition: transform var(--transition-normal) !important;
+    width: 100% !important;
+    max-width: 380px !important;
+    box-shadow: var(--shadow-lg) !important;
+    border-left: 1px solid var(--border) !important;
+    border-top: none !important;
+  }
+  
+  .mobile-drawer.open {
+    transform: translateX(0) !important;
+  }
+}
+

@@ -18,6 +18,9 @@ export default function Sidebar({
   onRegionToleranceChange,
   cropToolActive,
   onCropToolToggle,
+  isMobile,
+  isOpen,
+  onClose,
 }) {
   const fileInputRef = useRef(null);
 
@@ -31,14 +34,15 @@ export default function Sidebar({
 
   return (
     <aside
-      className="glass-strong"
+      className={`glass-strong ${isMobile ? 'mobile-drawer' : ''} ${isMobile && isOpen ? 'open' : ''}`}
       style={{
-        width: 380,
-        minWidth: 380,
+        width: isMobile ? '100%' : 380,
+        minWidth: isMobile ? 0 : 380,
+        maxWidth: isMobile ? 380 : 'none',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        borderLeft: '1px solid var(--border)',
+        borderLeft: isMobile ? 'none' : '1px solid var(--border)',
         overflow: 'hidden',
       }}
     >
@@ -59,14 +63,28 @@ export default function Sidebar({
               Configure image operations
             </p>
           </div>
-          <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Upload
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn-primary" onClick={() => fileInputRef.current?.click()} style={isMobile ? { padding: '8px 10px' } : {}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              {!isMobile && ' Upload'}
+            </button>
+            {isMobile && (
+              <button
+                className="btn-icon"
+                onClick={onClose}
+                style={{ width: 32, height: 32 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
         <input
           ref={fileInputRef}

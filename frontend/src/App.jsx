@@ -41,6 +41,20 @@ export default function App() {
     localStorage.setItem('seg-dashboard-theme', theme);
   }, [theme]);
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   }, []);
@@ -80,9 +94,12 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         hasProcessedImage={!!processedImage}
+        isMobile={isMobile}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         <Workspace
           originalImage={originalImage}
           processedImage={processedImage}
@@ -92,6 +109,14 @@ export default function App() {
           onCrop={applyCrop}
           onUpload={uploadImage}
         />
+
+        {isMobile && (
+          <div
+            className={`drawer-backdrop ${sidebarOpen ? 'show' : ''}`}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <Sidebar
           pipeline={pipeline}
           onUpdate={updatePipeline}
@@ -104,6 +129,9 @@ export default function App() {
           onRegionToleranceChange={setRegionTolerance}
           cropToolActive={cropToolActive}
           onCropToolToggle={toggleCropTool}
+          isMobile={isMobile}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
       </div>
 

@@ -164,6 +164,56 @@ export default function Workspace({
     }
   };
 
+  // Touch event handlers for crop/region operations
+  const handleTouchStart = useCallback(
+    (e) => {
+      if (!hasOriginal) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      if (isRegionToolActive) {
+        const coords = mapToImageCoords(touch.clientX, touch.clientY, false);
+        if (coords) {
+          onRegionSelect(coords.x, coords.y);
+        }
+      } else if (isCropToolActive) {
+        const coords = mapToImageCoords(touch.clientX, touch.clientY, false);
+        if (!coords) return;
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        setCropStart(coords);
+        setIsCropping(true);
+        setCropBox(null);
+      }
+    },
+    [isRegionToolActive, isCropToolActive, hasOriginal, mapToImageCoords, onRegionSelect]
+  );
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isCropping || !cropStart) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      const coords = mapToImageCoords(touch.clientX, touch.clientY, true);
+      if (!coords) return;
+      setCropBox({
+        x: Math.min(cropStart.x, coords.x),
+        y: Math.min(cropStart.y, coords.y),
+        w: Math.abs(coords.x - cropStart.x),
+        h: Math.abs(coords.y - cropStart.y),
+      });
+    },
+    [isCropping, cropStart, mapToImageCoords]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setIsCropping(false);
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -181,6 +231,9 @@ export default function Workspace({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Empty State */}
       {!hasOriginal && (
@@ -564,7 +617,7 @@ export default function Workspace({
             }}
             className="animate-pulse-dot"
           />
-          Seret kursor pada citra untuk menyeleksi Crop
+          Seret kursor atau jari pada citra untuk menyeleksi Crop
         </div>
       )}
 
@@ -599,7 +652,7 @@ export default function Workspace({
             }}
             className="animate-pulse-dot"
           />
-          Klik pada citra untuk menyeleksi wilayah
+          Klik atau sentuh pada citra untuk menyeleksi wilayah
         </div>
       )}
     </div>

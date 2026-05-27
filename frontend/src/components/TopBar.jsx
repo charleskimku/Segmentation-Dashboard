@@ -10,6 +10,9 @@ export default function TopBar({
   theme,
   onToggleTheme,
   hasProcessedImage,
+  isMobile,
+  sidebarOpen,
+  onToggleSidebar,
 }) {
   return (
     <header
@@ -19,39 +22,43 @@ export default function TopBar({
         alignItems: 'center',
         justifyContent: 'space-between',
         height: 56,
-        padding: '0 20px',
+        padding: isMobile ? '0 12px' : '0 20px',
         borderBottom: '1px solid var(--border)',
         zIndex: 50,
         flexShrink: 0,
       }}
     >
       {/* Left: Logo + Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 12px var(--accent-glow)',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="3" y1="9" x2="21" y2="9" />
-            <line x1="9" y1="3" x2="9" y2="21" />
-          </svg>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10 }}>
+        {!isMobile && (
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 'var(--radius-md)',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 12px var(--accent-glow)',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </div>
+        )}
         <div>
-          <h1 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, lineHeight: 1.2, color: 'var(--text-primary)' }}>
             Segmentation Dashboard
           </h1>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-            Interactive Face Processing
-          </p>
+          {!isMobile && (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+              Interactive Face Processing
+            </p>
+          )}
         </div>
       </div>
 
@@ -60,8 +67,8 @@ export default function TopBar({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '6px 14px',
+          gap: isMobile ? 0 : 8,
+          padding: isMobile ? '6px' : '6px 14px',
           borderRadius: 99,
           background: isProcessing ? 'rgba(139, 92, 246, 0.12)' : 'rgba(16, 185, 129, 0.1)',
           border: `1px solid ${isProcessing ? 'rgba(139, 92, 246, 0.2)' : 'rgba(16, 185, 129, 0.15)'}`,
@@ -93,19 +100,21 @@ export default function TopBar({
             />
           </div>
         )}
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: isProcessing ? 'var(--accent)' : 'var(--success)',
-          }}
-        >
-          {isProcessing ? 'Processing...' : 'Ready'}
-        </span>
+        {!isMobile && (
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: isProcessing ? 'var(--accent)' : 'var(--success)',
+            }}
+          >
+            {isProcessing ? 'Processing...' : 'Ready'}
+          </span>
+        )}
       </div>
 
       {/* Right: Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6 }}>
         <button
           className="btn-icon tooltip-wrapper"
           data-tooltip="Undo"
@@ -130,7 +139,7 @@ export default function TopBar({
           </svg>
         </button>
 
-        <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 4px' }} />
+        <div style={{ width: 1, height: 24, background: 'var(--border)', margin: isMobile ? '0 2px' : '0 4px' }} />
 
         <button
           className="btn-icon tooltip-wrapper"
@@ -169,7 +178,36 @@ export default function TopBar({
             </svg>
           )}
         </button>
+
+        {isMobile && (
+          <>
+            <div style={{ width: 1, height: 24, background: 'var(--border)', margin: '0 2px' }} />
+            <button
+              className={`btn-icon tooltip-wrapper ${sidebarOpen ? 'selection-active' : ''}`}
+              data-tooltip="Show Controls"
+              onClick={onToggleSidebar}
+              style={{
+                background: sidebarOpen ? 'var(--accent)' : 'transparent',
+                color: sidebarOpen ? '#fff' : 'var(--text-secondary)',
+                borderColor: sidebarOpen ? 'var(--accent)' : 'var(--border)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14" />
+                <line x1="4" y1="10" x2="4" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12" y2="3" />
+                <line x1="20" y1="21" x2="20" y2="16" />
+                <line x1="20" y1="12" x2="20" y2="3" />
+                <line x1="1" y1="14" x2="7" y2="14" />
+                <line x1="9" y1="8" x2="15" y2="8" />
+                <line x1="17" y1="16" x2="23" y2="16" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
     </header>
   );
 }
+

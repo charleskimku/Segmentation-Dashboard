@@ -12,7 +12,8 @@ function debounce(fn, delay) {
 }
 
 async function request(url, body) {
-  const response = await fetch(url, {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+  const response = await fetch(`${apiBase}${url}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
