@@ -9,7 +9,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.routes import router as api_router
+import traceback
+
+app_error = None
+try:
+    from backend.api.routes import router as api_router
+except Exception as e:
+    app_error = traceback.format_exc()
 
 
 # ============================================================================
@@ -48,7 +54,22 @@ app.add_middleware(
 # Router API
 # ============================================================================
 
-app.include_router(api_router)
+if app_error:
+    @app.post("/api/process")
+    async def process_image_fallback(request: Request):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Import Error during main.py initialization:\n{app_error}"}
+        )
+
+    @app.post("/api/region-select")
+    async def region_select_fallback(request: Request):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Import Error during main.py initialization:\n{app_error}"}
+        )
+else:
+    app.include_router(api_router)
 
 
 # ============================================================================
