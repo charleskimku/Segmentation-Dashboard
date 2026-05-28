@@ -12,6 +12,7 @@ export default function Sidebar({
   histogramData,
   originalHistogram,
   onUpload,
+  onCameraOpen,
   regionToolActive,
   onRegionToolToggle,
   regionTolerance,
@@ -63,7 +64,33 @@ export default function Sidebar({
               Configure image operations
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Camera Button */}
+            <button 
+              className="btn-secondary" 
+              onClick={onCameraOpen} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: isMobile ? '8px 10px' : '8px 12px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              {!isMobile && ' Kamera'}
+            </button>
+
+            {/* Upload Button */}
             <button className="btn-primary" onClick={() => fileInputRef.current?.click()} style={isMobile ? { padding: '8px 10px' } : {}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

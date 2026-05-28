@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import TopBar from './components/TopBar';
 import Workspace from './components/Workspace';
 import Sidebar from './components/Sidebar';
+import CameraModal from './components/CameraModal';
 import useImageProcessor from './hooks/useImageProcessor';
 
 export default function App() {
@@ -9,6 +10,8 @@ export default function App() {
     const saved = localStorage.getItem('seg-dashboard-theme');
     return saved || 'dark';
   });
+
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const {
     originalImage,
@@ -27,6 +30,7 @@ export default function App() {
     setRegionTolerance,
     setCropToolActive,
     uploadImage,
+    setOriginalImageFromBase64,
     updatePipeline,
     undo,
     redo,
@@ -108,6 +112,7 @@ export default function App() {
           onRegionSelect={handleRegionSelect}
           onCrop={applyCrop}
           onUpload={uploadImage}
+          onCameraOpen={() => setIsCameraOpen(true)}
         />
 
         {isMobile && (
@@ -123,6 +128,7 @@ export default function App() {
           histogramData={histogramData}
           originalHistogram={originalHistogram}
           onUpload={uploadImage}
+          onCameraOpen={() => setIsCameraOpen(true)}
           regionToolActive={regionToolActive}
           onRegionToolToggle={toggleRegionTool}
           regionTolerance={regionTolerance}
@@ -160,6 +166,12 @@ export default function App() {
           {error}
         </div>
       )}
+      {/* Camera modal */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={setOriginalImageFromBase64}
+      />
     </div>
   );
 }

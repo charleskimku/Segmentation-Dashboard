@@ -183,9 +183,10 @@ def region_flood_fill(
     flood_image = image.copy()
     mask = np.zeros((h + 2, w + 2), dtype=np.uint8)
 
-    # Konfigurasi toleransi
-    lo_diff = (tolerance, tolerance, tolerance)
-    up_diff = (tolerance, tolerance, tolerance)
+    # Konfigurasi toleransi sesuai dengan jumlah channel
+    channels = 1 if len(image.shape) == 2 else image.shape[2]
+    lo_diff = tuple([tolerance] * channels)
+    up_diff = tuple([tolerance] * channels)
 
     # Jalankan flood fill (hanya mengisi mask)
     flood_fill_flags = 4 | cv2.FLOODFILL_MASK_ONLY | (255 << 8)
@@ -193,7 +194,7 @@ def region_flood_fill(
         flood_image,
         mask,
         seedPoint=(seed_x, seed_y),
-        newVal=(0, 0, 0),
+        newVal=tuple([0] * channels),
         loDiff=lo_diff,
         upDiff=up_diff,
         flags=flood_fill_flags,
@@ -202,8 +203,11 @@ def region_flood_fill(
     # Ekstrak mask tanpa padding (hapus border 1 piksel di setiap sisi)
     region_mask = mask[1 : h + 1, 1 : w + 1]
 
-    # Buat citra hasil dengan highlight pada region terpilih
-    result_image = image.copy()
+    # Pastikan result_image dan overlay memiliki format BGR agar bisa di-overlay warna hijau
+    if len(image.shape) == 2:
+        result_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    else:
+        result_image = image.copy()
 
     # Buat overlay berwarna hijau semi-transparan untuk region terpilih
     overlay = result_image.copy()

@@ -191,6 +191,16 @@ export default function useImageProcessor() {
     };
   }, [originalImage]);
 
+  const setOriginalImageFromBase64 = useCallback((base64) => {
+    setOriginalImage(base64);
+    setProcessedImage(null);
+    setHistogramData(null);
+    setOriginalHistogram(null);
+    setPipeline(DEFAULT_PIPELINE);
+    setHistory([DEFAULT_PIPELINE]);
+    setHistoryIndex(0);
+  }, []);
+
   return {
     originalImage,
     processedImage,
@@ -208,6 +218,7 @@ export default function useImageProcessor() {
     setRegionTolerance,
     setCropToolActive,
     uploadImage,
+    setOriginalImageFromBase64,
     updatePipeline,
     undo,
     redo,
