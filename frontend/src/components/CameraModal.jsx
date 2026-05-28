@@ -108,14 +108,28 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
     const width = video.videoWidth;
     const height = video.videoHeight;
 
-    canvas.width = width;
-    canvas.height = height;
+    const maxDimension = 1024;
+    let targetWidth = width;
+    let targetHeight = height;
+
+    if (width > maxDimension || height > maxDimension) {
+      if (width > height) {
+        targetHeight = Math.round((height * maxDimension) / width);
+        targetWidth = maxDimension;
+      } else {
+        targetWidth = Math.round((width * maxDimension) / height);
+        targetHeight = maxDimension;
+      }
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     // Draw the current video frame onto the canvas
-    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
-    // Convert canvas image to base64 PNG data
-    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    // Convert canvas image to base64 JPEG data
+    const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
     onCapture(base64);
     stopCamera();
     onClose();

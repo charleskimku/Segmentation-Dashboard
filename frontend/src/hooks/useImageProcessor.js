@@ -32,6 +32,38 @@ const DEFAULT_PIPELINE = {
   },
 };
 
+function resizeImage(base64Str, maxDimension = 1024) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Str.startsWith('data:') ? base64Str : `data:image/jpeg;base64,${base64Str}`;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const compressedBase64 = dataUrl.split(',')[1];
+      resolve(compressedBase64);
+    };
+    img.onerror = (err) => reject(err);
+  });
+}
+
 export default function useImageProcessor() {
   const [originalImage, setOriginalImage] = useState(null);
   const [processedImage, setProcessedImage] = useState(null);
@@ -84,18 +116,24 @@ export default function useImageProcessor() {
   }, [pipeline, originalImage, callApi]);
 
   const uploadImage = useCallback((file) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target.result.split(',')[1];
-        setOriginalImage(base64);
-        setProcessedImage(null);
-        setHistogramData(null);
-        setOriginalHistogram(null);
-        setPipeline(DEFAULT_PIPELINE);
-        setHistory([DEFAULT_PIPELINE]);
-        setHistoryIndex(0);
-        resolve(base64);
+      reader.onload = async (e) => {
+        try {
+          const rawBase64 = e.target.result;
+          const compressedBase64 = await resizeImage(rawBase64, 1024);
+          setOriginalImage(compressedBase64);
+          setProcessedImage(null);
+          setHistogramData(null);
+          setOriginalHistogram(null);
+          setPipeline(DEFAULT_PIPELINE);
+          setHistory([DEFAULT_PIPELINE]);
+          setHistoryIndex(0);
+          resolve(compressedBase64);
+        } catch (err) {
+          console.error('Error resizing uploaded image:', err);
+          reject(err);
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -179,7 +217,8 @@ export default function useImageProcessor() {
       canvas.height = box.h;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
-      const croppedBase64 = canvas.toDataURL('image/png').split(',')[1];
+      // Use image/jpeg compression for cropped images to keep size small
+      const croppedBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
       setOriginalImage(croppedBase64);
       setProcessedImage(null);
       setHistogramData(null);
