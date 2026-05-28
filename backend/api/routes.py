@@ -6,14 +6,19 @@ termasuk pipeline pemrosesan bertahap dan seleksi region.
 """
 
 from typing import Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+import traceback
 
-from backend.core.utils import decode_base64_image, encode_image_base64, to_grayscale
-from backend.core.preprocessing import compute_histogram, contrast_stretch
-from backend.core.filtering import low_pass_filter, high_pass_filter
-from backend.core.edge_detection import detect_edges
-from backend.core.segmentation import global_threshold, adaptive_threshold, region_flood_fill
+import_error = None
+try:
+    from backend.core.utils import decode_base64_image, encode_image_base64, to_grayscale
+    from backend.core.preprocessing import compute_histogram, contrast_stretch
+    from backend.core.filtering import low_pass_filter, high_pass_filter
+    from backend.core.edge_detection import detect_edges
+    from backend.core.segmentation import global_threshold, adaptive_threshold, region_flood_fill
+except Exception as e:
+    import_error = traceback.format_exc()
 
 
 # ============================================================================
@@ -115,150 +120,111 @@ router = APIRouter()
 
 @router.post("/api/process", response_model=ProcessResponse)
 async def process_image(request: ProcessRequest) -> ProcessResponse:
-    """Memproses citra melalui pipeline pemrosesan bertahap.
+    if import_error:
+        raise HTTPException(status_code=500, detail=f"Import Error in Serverless Function:\n{import_error}")
 
-    Algoritma:
-    1. Dekode citra input dari base64 ke numpy array (BGR).
-    2. Hitung histogram citra asli sebelum pemrosesan apapun.
-       Histogram ini disimpan untuk perbandingan dengan histogram setelah proses.
-    3. Jalankan pipeline pemrosesan secara berurutan (sequential):
-       a. Tahap 1 - Peregangan Kontras (jika diaktifkan):
-          Memetakan ulang rentang intensitas piksel dari [min_val, max_val]
-          ke [0, 255] menggunakan interpolasi linier.
-       b. Tahap 2 - Filtering (jika diaktifkan):
-          - Tipe 'low': Menerapkan filter low-pass (Gaussian/Average blur)
-            untuk menghaluskan citra dan mengurangi noise.
-          - Tipe 'high': Menerapkan filter high-pass (unsharp masking)
-            untuk mempertajam detail dan tepi.
-       c. Tahap 3 - Deteksi Tepi (jika diaktifkan):
-          Menerapkan salah satu metode deteksi tepi (Canny/Sobel/Prewitt)
-          untuk mengidentifikasi batas-batas objek.
-       d. Tahap 4 - Thresholding (jika diaktifkan):
-          - Tipe 'global': Threshold tunggal untuk seluruh citra.
-          - Tipe 'adaptive': Threshold lokal berbasis lingkungan piksel.
-    4. Hitung histogram citra hasil pemrosesan.
-    5. Enkode citra hasil ke base64 dan kembalikan bersama kedua histogram.
+    try:
+        # Dekode citra input
+        image = decode_base64_image(request.image)
 
-    Args:
-        request: ProcessRequest berisi citra base64 dan konfigurasi pipeline.
+        # Hitung histogram citra asli
+        original_histogram = compute_histogram(image)
 
-    Returns:
-        ProcessResponse: Citra hasil pemrosesan (base64), histogram hasil,
-                        dan histogram asli.
-    """
-    # Dekode citra input
-    image = decode_base64_image(request.image)
+        # Jalankan pipeline pemrosesan secara berurutan
+        processed = image.copy()
 
-    # Hitung histogram citra asli
-    original_histogram = compute_histogram(image)
+        # Tahap 0: Grayscale
+        if request.pipeline.grayscale.enabled:
+            processed = to_grayscale(processed)
 
-    # Jalankan pipeline pemrosesan secara berurutan
-    processed = image.copy()
+        # Tahap 1: Peregangan Kontras
+        if request.pipeline.contrast.enabled:
+            processed = contrast_stretch(
+                processed,
+                min_val=request.pipeline.contrast.min_val,
+                max_val=request.pipeline.contrast.max_val,
+            )
 
-    # Tahap 0: Grayscale
-    if request.pipeline.grayscale.enabled:
-        processed = to_grayscale(processed)
+        # Tahap 2: Filtering (Low-pass atau High-pass)
+        if request.pipeline.filter.enabled:
+            if request.pipeline.filter.type == "low":
+                processed = low_pass_filter(
+                    processed,
+                    kernel_size=request.pipeline.filter.kernel_size,
+                    method=request.pipeline.filter.method,
+                )
+            elif request.pipeline.filter.type == "high":
+                processed = high_pass_filter(
+                    processed,
+                    strength=request.pipeline.filter.strength,
+                )
 
-    # Tahap 1: Peregangan Kontras
-    if request.pipeline.contrast.enabled:
-        processed = contrast_stretch(
-            processed,
-            min_val=request.pipeline.contrast.min_val,
-            max_val=request.pipeline.contrast.max_val,
+        # Tahap 3: Deteksi Tepi
+        if request.pipeline.edge_detection.enabled:
+            edge_params = {}
+            if request.pipeline.edge_detection.method == "canny":
+                edge_params["low_threshold"] = request.pipeline.edge_detection.low_threshold
+                edge_params["high_threshold"] = request.pipeline.edge_detection.high_threshold
+            elif request.pipeline.edge_detection.method == "sobel":
+                edge_params["ksize"] = request.pipeline.edge_detection.ksize
+
+            processed = detect_edges(
+                processed,
+                method=request.pipeline.edge_detection.method,
+                **edge_params,
+            )
+
+        # Tahap 4: Thresholding/Segmentasi
+        if request.pipeline.threshold.enabled:
+            if request.pipeline.threshold.type == "global":
+                processed = global_threshold(
+                    processed,
+                    thresh_value=request.pipeline.threshold.value,
+                )
+            elif request.pipeline.threshold.type == "adaptive":
+                processed = adaptive_threshold(
+                    processed,
+                    block_size=request.pipeline.threshold.block_size,
+                    C=request.pipeline.threshold.C,
+                )
+
+        # Hitung histogram citra hasil pemrosesan
+        result_histogram = compute_histogram(processed)
+
+        # Enkode citra hasil ke base64
+        processed_b64 = encode_image_base64(processed)
+
+        return ProcessResponse(
+            processed_image=processed_b64,
+            histogram=result_histogram,
+            original_histogram=original_histogram,
         )
-
-    # Tahap 2: Filtering (Low-pass atau High-pass)
-    if request.pipeline.filter.enabled:
-        if request.pipeline.filter.type == "low":
-            processed = low_pass_filter(
-                processed,
-                kernel_size=request.pipeline.filter.kernel_size,
-                method=request.pipeline.filter.method,
-            )
-        elif request.pipeline.filter.type == "high":
-            processed = high_pass_filter(
-                processed,
-                strength=request.pipeline.filter.strength,
-            )
-
-    # Tahap 3: Deteksi Tepi
-    if request.pipeline.edge_detection.enabled:
-        edge_params = {}
-        if request.pipeline.edge_detection.method == "canny":
-            edge_params["low_threshold"] = request.pipeline.edge_detection.low_threshold
-            edge_params["high_threshold"] = request.pipeline.edge_detection.high_threshold
-        elif request.pipeline.edge_detection.method == "sobel":
-            edge_params["ksize"] = request.pipeline.edge_detection.ksize
-
-        processed = detect_edges(
-            processed,
-            method=request.pipeline.edge_detection.method,
-            **edge_params,
-        )
-
-    # Tahap 4: Thresholding/Segmentasi
-    if request.pipeline.threshold.enabled:
-        if request.pipeline.threshold.type == "global":
-            processed = global_threshold(
-                processed,
-                thresh_value=request.pipeline.threshold.value,
-            )
-        elif request.pipeline.threshold.type == "adaptive":
-            processed = adaptive_threshold(
-                processed,
-                block_size=request.pipeline.threshold.block_size,
-                C=request.pipeline.threshold.C,
-            )
-
-    # Hitung histogram citra hasil pemrosesan
-    result_histogram = compute_histogram(processed)
-
-    # Enkode citra hasil ke base64
-    processed_b64 = encode_image_base64(processed)
-
-    return ProcessResponse(
-        processed_image=processed_b64,
-        histogram=result_histogram,
-        original_histogram=original_histogram,
-    )
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Runtime Error in Serverless Function:\n{traceback.format_exc()}")
 
 
 @router.post("/api/region-select", response_model=RegionSelectResponse)
 async def region_select(request: RegionSelectRequest) -> RegionSelectResponse:
-    """Melakukan seleksi region menggunakan flood fill dari titik benih.
+    if import_error:
+        raise HTTPException(status_code=500, detail=f"Import Error in Serverless Function:\n{import_error}")
 
-    Algoritma:
-    1. Dekode citra input dari base64 ke numpy array (BGR).
-    2. Panggil fungsi region_flood_fill dengan parameter:
-       - seed_x, seed_y: Koordinat titik benih yang dipilih pengguna (biasanya
-         dari klik pada citra di frontend).
-       - tolerance: Seberapa mirip warna piksel tetangga harus dengan piksel
-         benih agar dimasukkan ke region. Nilai lebih tinggi = region lebih besar.
-    3. Fungsi flood fill mengembalikan:
-       - result_image: Citra asli dengan overlay hijau semi-transparan pada
-         region yang terpilih (memudahkan visualisasi).
-       - mask_image: Mask biner di mana piksel putih menunjukkan area
-         yang termasuk dalam region terpilih.
-    4. Kembalikan kedua citra dalam format base64.
+    try:
+        # Dekode citra input
+        image = decode_base64_image(request.image)
 
-    Args:
-        request: RegionSelectRequest berisi citra base64, koordinat seed, dan toleransi.
+        # Jalankan flood fill
+        result = region_flood_fill(
+            image,
+            seed_x=request.seed_x,
+            seed_y=request.seed_y,
+            tolerance=request.tolerance,
+        )
 
-    Returns:
-        RegionSelectResponse: Citra hasil dengan highlight region dan mask biner.
-    """
-    # Dekode citra input
-    image = decode_base64_image(request.image)
-
-    # Jalankan flood fill
-    result = region_flood_fill(
-        image,
-        seed_x=request.seed_x,
-        seed_y=request.seed_y,
-        tolerance=request.tolerance,
-    )
-
-    return RegionSelectResponse(
-        result_image=result["result_image"],
-        mask_image=result["mask_image"],
-    )
+        return RegionSelectResponse(
+            result_image=result["result_image"],
+            mask_image=result["mask_image"],
+        )
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Runtime Error in Serverless Function:\n{traceback.format_exc()}")
